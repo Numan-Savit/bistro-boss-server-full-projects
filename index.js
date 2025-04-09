@@ -1,4 +1,4 @@
-// step-15________________________________________________________________________________________3
+// step-15__________________________________________________________________________________3
 
 const express = require('express');
 const app = express();
@@ -35,23 +35,37 @@ async function run() {
     // step-16_________________________________________________________________________________1
 
     const menuCollection = client.db("bistroDb").collection("menu");
-    const reviewsCollection = client.db("bistroDb").collection("reviews");  //step-17_________________2
+    const reviewsCollection = client.db("bistroDb").collection("reviews");  //step-17__________2
+
+    const cartCollection = client.db("bistroDb").collection("carts"); //step-28________________1
 
     app.get('/menu', async(req, res)=>{
         const result = await menuCollection.find().toArray();
         res.send(result);
     })
 
-    // step-16__________________________________________________________________________________1
+    // step-16_________________________________________________________________________________1
 
-    // step-17___________________________________________________________________________________1
+    // step-17_________________________________________________________________________________1
 
     app.get('/reviews', async(req, res)=>{
       const result = await reviewsCollection.find().toArray();
       res.send(result);
     })
 
-    // step-17___________________________________________________________________________________2
+    // step-17_________________________________________________________________________________2
+
+    // step-28_________________________________________________________________________________2
+
+    // cart collection
+
+    app.post('/carts', async(req, res)=>{
+      const cartItem = req.body;
+      const result = await cartCollection.insertOne(cartItem);
+      res.send(result);
+    })
+
+    // step-28_________________________________________________________________________________2
 
 
     // Send a ping to confirm a successful connection
