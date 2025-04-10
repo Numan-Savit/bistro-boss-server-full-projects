@@ -55,6 +55,16 @@ async function run() {
 
     // step-17_________________________________________________________________________________2
 
+    // step-30_________________________________________________________________________________1
+    //  cartCollection-2 shopping cart add api
+      
+     app.get('/carts', async(req, res)=>{
+       const email = req.query.email; //step-31-1
+       const query = {email: email};  //step-31-2
+       const result = await cartCollection.find(query).toArray();
+       res.send(result);
+     })
+
     // step-28_________________________________________________________________________________2
 
     // cart collection
