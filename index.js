@@ -15,7 +15,7 @@ app.use(express.json());
 
 
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.ymvr3sa.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -34,10 +34,32 @@ async function run() {
 
     // step-16_________________________________________________________________________________1
 
+    const userCollection = client.db("bistroDb").collection("users");  //step-35_______________1
     const menuCollection = client.db("bistroDb").collection("menu");
     const reviewsCollection = client.db("bistroDb").collection("reviews");  //step-17__________2
 
     const cartCollection = client.db("bistroDb").collection("carts"); //step-28________________1
+
+    // user related api
+
+    app.get('/users', async(req, res)=>{
+        const result = await userCollection.find().toArray();  //step-38_______________________3
+        res.send(result);
+    })
+
+    //  step-35_________________________________________________________________________________2
+    app.post('/users', async(req, res)=>{
+        const user = req.body;
+        const query = {email: user.email}; //step-37____________________________________________1
+        const existingUser = await userCollection.findOne(query); //step-37_____________________2
+        if(existingUser){
+          return res.send({message: 'user already exists',insertedId: null}) //step-37__________3
+        }
+        const result = await userCollection.insertOne(user);
+        res.send(result);
+    })
+
+
 
     app.get('/menu', async(req, res)=>{
         const result = await menuCollection.find().toArray();
@@ -76,6 +98,15 @@ async function run() {
     })
 
     // step-28_________________________________________________________________________________2
+
+    // step-34_________________________________________________________________________________2
+
+    app.delete('/carts/:id', async(req, res)=>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)};
+      const result = await cartCollection.deleteOne(query);
+      res.send(result);
+    })
 
 
     // Send a ping to confirm a successful connection
