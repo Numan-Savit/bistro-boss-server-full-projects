@@ -4,6 +4,8 @@ const express = require('express');
 const app = express();
 const cors = require('cors');
 
+const jwt = require('jsonwebtoken');  //step-40_____________________________________________3
+
 require('dotenv').config();
 
 const port = process.env.PORT || 5000;
@@ -40,9 +42,67 @@ async function run() {
 
     const cartCollection = client.db("bistroDb").collection("carts"); //step-28________________1
 
+    // jwt api
+
+     app.post('/jwt', async(req, res)=>{      //step-41________________________________________1
+        const user = req.body;
+        const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '1h'});
+        res.send({token});
+     })
+
+    //  middleware
+
+    const verifyToken = (req, res, next)=>{                  //step-42__________________________1
+      //  console.log('Inside jwt',req.headers.authorization);
+       if(!req.headers.authorization){
+          return res.status(401).send({message:'unauthorized access'});
+       }
+       const token = req.headers.authorization.split(' ')[1];
+       jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded)=>{
+         if(err){
+            return res.status(401).send({message:'unauthorized access'});
+         }
+         req.decoded = decoded;
+         next();
+       })
+       
+    }
+
+    // step-44_____________________________________________________________________________1
+
+        // use verifyToken admin after verifyToken
+
+       const verifyAdmin = async(req, res, next)=>{
+         const email = req.decoded.email;
+         const query = {email: email};
+         const user = await userCollection.findOne(query);
+         const isAdmin = user?.role === 'admin';
+         if(!isAdmin){
+            return res.status(403).send({message: 'Forbidden access'});
+         }
+         next();
+       }
+
+    // step-43______________________________________________________________________________1
+
+    app.get('/users/admin/:email',verifyToken, async(req, res)=>{
+         const email = req.params.email;
+         if(email !== req.decoded.email){
+            return res.status(403).send({message: 'Forbidden access'});
+         }
+         const query = {email: email};
+         const user = await userCollection.findOne(query);
+         let admin = false;
+         if(user){
+            admin = user?.role === 'admin';
+         }
+         res.send({admin});
+    })
+
     // user related api
 
-    app.get('/users', async(req, res)=>{
+    app.get('/users', verifyToken, verifyAdmin, async(req, res)=>{
+        // console.log(req.headers.authorization); step-41_____________________________________4
         const result = await userCollection.find().toArray();  //step-38_______________________3
         res.send(result);
     })
@@ -57,13 +117,45 @@ async function run() {
         }
         const result = await userCollection.insertOne(user);
         res.send(result);
+    });
+
+    // admin
+
+    app.patch('/users/admin/:id',verifyToken, verifyAdmin, async(req, res)=>{   //step-39_______________________3
+       const id = req.params.id;
+       const filter = {_id: new ObjectId(id)};
+       const updateDoc = {
+        $set: {
+            role: 'admin'
+        }
+       }
+       const result = await userCollection.updateOne(filter, updateDoc);
+       res.send(result);
+    })
+
+    // admin section user related api delete
+
+    app.delete('/users/:id',verifyToken, verifyAdmin, async(req, res) =>{  //step-39_______________________1
+        const id = req.params.id;
+        const query = {_id: new ObjectId(id)};
+        const result = await userCollection.deleteOne(query);
+        res.send(result);
     })
 
 
+    // menu related api
 
     app.get('/menu', async(req, res)=>{
         const result = await menuCollection.find().toArray();
         res.send(result);
+    });
+
+    // step-48_____________________________________________________________________3
+    //  add item api 
+    app.post('/menu',verifyToken, verifyAdmin, async(req, res)=>{
+      const item = req.body;
+      const result = await menuCollection.insertOne(item);
+      res.send(result);
     })
 
     // step-16_________________________________________________________________________________1
