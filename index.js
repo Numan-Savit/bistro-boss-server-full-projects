@@ -150,6 +150,15 @@ async function run() {
         res.send(result);
     });
 
+    // update related api
+      //  step-51_________________________________________________________________2
+     app.get('/menu/:id', async(req, res)=>{
+       const id = req.params.id;
+       const query = {_id: new ObjectId(id)};
+       const result = await menuCollection.findOne(query);
+       res.send(result);
+     })
+
     // step-48_____________________________________________________________________3
     //  add item api 
     app.post('/menu',verifyToken, verifyAdmin, async(req, res)=>{
@@ -157,6 +166,33 @@ async function run() {
       const result = await menuCollection.insertOne(item);
       res.send(result);
     })
+
+    // update item api
+      // step-51___________________________________________4
+    app.patch('/menu/:id', async(req,res)=>{
+       const item = req.body;
+       const id = req.params.id;
+       const filter = {_id: new ObjectId(id)}
+       const updatedDoc = {
+        $set: {
+            name: item.name,
+            category: item.category,
+            price: item.price,
+            recipe: item.recipe,
+            Image: item.Image
+        }
+       }
+       const result = await menuCollection.updateOne(filter, updatedDoc);
+       res.send(result);
+    })
+
+    // step-50_______________________________________________________________________________2
+      app.delete('/menu/:id',verifyToken, verifyAdmin, async(req, res)=>{
+        const id = req.params.id;
+        const query = {_id: new ObjectId(id)};
+        const result = await menuCollection.deleteOne(query);
+        res.send(result);
+      })
 
     // step-16_________________________________________________________________________________1
 
