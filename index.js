@@ -257,6 +257,17 @@ async function run() {
         })
     })
 
+    // payment history
+    // step-58_______________________________________________________________________1
+    app.get('/payments/:email', verifyToken, async(req, res)=>{
+        const query = {email: req.params.email};
+        if(req.decoded.email !== req.params.email){
+            return res.status(403).send({message: 'Forbidden access'});
+        }
+        const result = await paymentCollection.find(query).toArray();
+        res.send(result);
+    })
+
     // payment related api
     // step-57__________________________________________2
     app.post('/payments', async(req, res)=>{
@@ -269,6 +280,63 @@ async function run() {
        const deleteResult = await cartCollection.deleteMany(query);
        res.send({paymentResult, deleteResult});
     })
+
+    // stats or analyticks
+    // step-60_______________________________________________________________________1
+
+    app.get('/admin-stats', verifyToken, verifyAdmin, async(req, res)=>{
+        const users = await userCollection.estimatedDocumentCount();
+        const menuItems = await menuCollection.estimatedDocumentCount();
+        const orders = await paymentCollection.estimatedDocumentCount();
+        res.send({
+          users,
+          menuItems,
+          orders
+        })
+    })
+
+
+  
+
+    app.get('/order-stats', verifyToken, verifyAdmin, async (req, res) => {
+      try {
+        const result = await paymentCollection.aggregate([
+          { $unwind: '$menuItemIds' },
+    
+          
+          {
+            $lookup: {
+              from: 'menu',            
+              localField: 'menuItemIds',
+              foreignField: '_id',
+              as: 'menuItems'
+            }
+          },
+          { $unwind: '$menuItems' },
+    
+          {
+            $group: {
+              _id: '$menuItems.category',
+              quantity: { $sum: 1 }
+            }
+          },
+          {
+            $project: {
+              _id: 0,
+              category: '$_id',
+              quantity: 1
+            }
+          }
+        ]).toArray();
+    
+        res.send(result);
+      } catch (err) {
+        console.error('Order-stats aggregation error:', err);
+        res.status(500).json({ message: 'Internal server error' });
+      }
+    });
+    
+    
 
 
     // Send a ping to confirm a successful connection
