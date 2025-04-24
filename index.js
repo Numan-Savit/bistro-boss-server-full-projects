@@ -8,6 +8,8 @@ const jwt = require('jsonwebtoken');  //step-40_________________________________
 
 require('dotenv').config();
 
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); //step-54__________________3
+
 const port = process.env.PORT || 5000;
 
 // middleware
@@ -41,6 +43,8 @@ async function run() {
     const reviewsCollection = client.db("bistroDb").collection("reviews");  //step-17__________2
 
     const cartCollection = client.db("bistroDb").collection("carts"); //step-28________________1
+
+    const paymentCollection = client.db("bistroDb").collection("payments"); //step-57________________3
 
     // jwt api
 
@@ -236,7 +240,38 @@ async function run() {
       res.send(result);
     })
 
+    // payment intent
+    // step-54________________________________________________________________________________4
 
+    app.post('/create-payment-intent', async(req, res)=>{
+        const {price} = req.body;
+        const amount = parseInt(price*100);
+        console.log(amount);
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount: amount,
+            currency: 'usd',
+            payment_method_types: ['card']
+        });
+        res.send({
+            clientSecret: paymentIntent.client_secret
+        })
+    })
+
+    // payment related api
+    // step-57__________________________________________2
+    app.post('/payments', async(req, res)=>{
+       const payment = req.body;
+       const paymentResult = await paymentCollection.insertOne(payment);
+       console.log(payment);
+       const query = {_id:{
+        $in: payment.cartIds.map(id => new ObjectId(id))
+       }};
+       const deleteResult = await cartCollection.deleteMany(query);
+       res.send({paymentResult, deleteResult});
+    })
+
+
+    // Send a ping to confirm a successful connection
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
